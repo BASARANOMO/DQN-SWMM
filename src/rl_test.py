@@ -15,70 +15,14 @@ import xlrd
 from pyswmm.swmm5 import PySWMM
 import matplotlib.pyplot as plt
 
+sys.path.append('..')
 
 #import from previous work
-from pond_net import pond_tracker
-from dqn_agent import deep_q_agent
-from ger_fun import reward_function, epsi_greedy
-from ger_fun import build_network
-from core_network import stacker, replay_stacker
-
-data = xlrd.open_workbook("rain_case_2018.xlsx")
-table = data.sheets()[0]
-###########################################################
-# real rain case 0 : 21840 - 21941
-
-rain_case_0 = []
-for i in range(288):
-    rain_case_0.append(0)
-
-for i in range(37):
-    precipVal = table.cell(i+21875,1).value
-    rain_case_0.append(precipVal)
-    rain_case_0.append(precipVal)
-    rain_case_0.append(precipVal)
-
-for i in range(399, 288*3):
-    rain_case_0.append(0)
-
-###########################################################
-# real rain case 1 : 29854
-rain_case_1 = []
-for i in range(288):
-    rain_case_1.append(0)
-for i in range(17):
-    precipVal = table.cell(i+29853,1).value
-    rain_case_1.append(precipVal)
-    rain_case_1.append(precipVal)
-    rain_case_1.append(precipVal)
-for i in range(339, 288*3):
-    rain_case_1.append(0)
-
-###########################################################
-# real rain case 2 : 32700
-rain_case_2 = []
-for i in range(288):
-    rain_case_2.append(0)
-for i in range(16):
-    precipVal = table.cell(i+32699,1).value
-    rain_case_2.append(precipVal)
-    rain_case_2.append(precipVal)
-    rain_case_2.append(precipVal)
-for i in range(336, 288*3):
-    rain_case_2.append(0)
-
-###########################################################
-# real rain case 3 : 32923
-rain_case_3 = []
-for i in range(288):
-    rain_case_3.append(0)
-for i in range(22):
-    precipVal = table.cell(i+32699,1).value
-    rain_case_3.append(precipVal)
-    rain_case_3.append(precipVal)
-    rain_case_3.append(precipVal)
-for i in range(354, 288*3):
-    rain_case_3.append(0)
+from Double_DQN.pond_net import pond_tracker
+from Double_DQN.dqn_agent import deep_q_agent
+from Double_DQN.ger_fun import reward_function, epsi_greedy
+from Double_DQN.ger_fun import build_network
+from Double_DQN.core_network import stacker, replay_stacker
 
 def rain_generation(type_num):
 
@@ -240,25 +184,17 @@ episode_timer=0
 
 while episode_timer<episode_count:
 
+    """
     i=random.randint(1,3)
-    sim_num=i
-    #rain = rain_case_0
+    """
 
-    if i==1:
-        rain=rain_case_1
-    elif i==2:
-        rain=rain_case_2
-    else:
-        rain=rain_case_3
+    i = 1
+    sim_num=i
 
     #run SWMM
-    #rain=rain_generation(i)
-    #sim_num=1
-    #rain = rain_generation(1)
+    rain=rain_generation(i)
 
-    #swmm_model = PySWMM('test_rain_case_0.inp','test_rain_case_0.rpt','test_rain_case_0.out')
-    swmm_model = PySWMM('test_rain_case_'+str(i)+'.inp','test_rain_case_'+str(i)+'.rpt','test_rain_case_'+str(i)+'.out')
-    #swmm_model = PySWMM('test'+str(i)+'.inp','test'+str(i)+'.rpt','test'+str(i)+'.out')
+    swmm_model = PySWMM(r'../model/test'+str(i)+'.inp', r'../model/test'+str(i)+'.rpt', r'../model/test'+str(i)+'.out')
     swmm_model.swmm_open()
     swmm_model.swmm_start()
     n1="Tank_LaoDongLu"

@@ -1,4 +1,4 @@
-from core_network import stacker, replay_stacker
+from Double_DQN.core_network import stacker, replay_stacker
 import numpy as np
 
 
@@ -66,7 +66,7 @@ class pond_tracker:
         self.bookkeeping['mean_outflow'] = np.mean(self.tracker_pond['outflow'].data())
         self.bookkeeping['mean_flooding'].update(np.mean(self.tracker_pond['flooding'].data()))
         self.bookkeeping['scenario_num'].update(np.mean(self.tracker_pond['scenario'].data()))
-        
+
     def forget_past(self):
         self.tracker_pond = {'depth': stacker(1),
                              'scenario': stacker(1),
