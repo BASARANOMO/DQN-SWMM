@@ -27,7 +27,7 @@ def epsi_greedy(action_space, q_values, epsilon):
     else:
         return np.argmax(q_values)
 
-
+"""
 # SWMM network functions
 def swmm_track(pond, attributes=["depth", "inflow", "outflow", "flooding"], controlled=False):
     att_commands = {'depth': swmm.DEPTH,
@@ -45,7 +45,7 @@ def swmm_track(pond, attributes=["depth", "inflow", "outflow", "flooding"], cont
             temp.append(swmm.get(pond.pond_id, att_commands[i], swmm.SI))
     temp = np.asarray(temp)
     return temp
-
+"""
 
 
 def build_network(input_states,
@@ -96,6 +96,8 @@ def plot_network(Ponds_network, components_tracking,
     #     return fig
 
 """
+
+"""
 # SWMM Network finder
 def swmm_states(Network, state):
     temp = []
@@ -104,3 +106,4 @@ def swmm_states(Network, state):
     temp = np.asarray(temp)
     temp = np.reshape(temp, (1, len(temp)))
     return temp
+"""

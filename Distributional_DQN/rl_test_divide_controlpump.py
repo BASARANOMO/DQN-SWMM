@@ -41,27 +41,65 @@ from core_network import stacker, replay_stacker
     #vaiables define
 
 
-    
-    #data prepare
-action = np.zeros((288*2, 7), dtype=np.int)
-rain = np.zeros((288*3, 1), dtype=np.float)
-for i in range(288*2):
-    for j in range(7):
-        action[i][j]=random.randint(0,1)
-for i in range(288*3):
-    rain[i]=random.random()
-action_space = np.linspace(0, 4, 5)
+#initial memory
+state_controlled=8
+
+     #data prepare
+
+rain = []
+
+for i in range(288):
+    rain.append(0)
+for i in range(288,300):
+    rain.append(0.1)
+for i in range(300,312):
+    rain.append(0.2)
+for i in range(312,336):
+    rain.append(0.4)   
+for i in range(336,384):
+    rain.append(0.5)
+for i in range(384,408):
+    rain.append(0.4)
+for i in range(408,420):
+    rain.append(0.2)
+for i in range(420,432):
+    rain.append(0.1)
+for i in range(432,288*3):
+    rain.append(0)
+
+action_space={}
+action_space['Pump_LaoDongLu'] = np.linspace(0, 3, 4, dtype='int')
+action_space['Pump_ChengXi'] = np.linspace(0, 4, 5, dtype='int')
+action_list={}
+action_part1=[[] for i in range(4)]
+action_part2=[[] for i in range(5)]
+action_part1[0]=[0,0,0]
+action_part1[1]=[1,0,0]
+action_part1[2]=[1,1,0]
+action_part1[3]=[1,1,1]
+action_part2[0]=[0,0,0,0]
+action_part2[1]=[1,0,0,0]
+action_part2[2]=[1,1,0,0]
+action_part2[3]=[1,1,1,0]
+action_part2[4]=[1,1,1,1]
+action_list['Pump_LaoDongLu']=action_part1
+action_list['Pump_ChengXi']=action_part2
+
+for i in range(4):
+    for j in range(5):
+        action_list[5*i+j]=action_part1[i]+action_part2[j]
+        
 
 #initial memory
-node_controlled=['ChengXi']
+node_controlled=['Pump_LaoDongLu','Pump_ChengXi']
 controlled_ponds = {}
 for i in node_controlled:
-    controlled_ponds[i] = pond_tracker(i,i,1,576)
+    controlled_ponds[i] = pond_tracker(i,i,state_controlled,576)
 
 #build neural model
 models_ac = {}
 for i in node_controlled:
-    model = target = build_network(1,5,2, 50, 'relu', 0.0)
+    model = target = build_network(state_controlled,len(action_space[i]),2, 50, 'relu', 0.0)
     #def build_network(input_states,output_states,hidden_layers,nuron_count,activation_function,dropout):
 #        if load_model != 'initial_run':
 #            model.load_weights(i + load_model)
@@ -75,7 +113,7 @@ agents_dqn = {}
 for i in node_controlled:
     temp = deep_q_agent(models_ac[i][0],
                     models_ac[i][1],
-                    1,
+                    state_controlled,
                     controlled_ponds[i].replay_memory,
                     epsi_greedy)
     agents_dqn[i] = temp
@@ -120,48 +158,31 @@ while episode_timer<episode_count:
         
         
     while(True):
-        step +=1
+        
         # Take a look at whats happening
         for i in node_controlled:
-            agents_dqn[i].state_vector = [swmm_model.getNodeResult(node[1],5)]
-        # Take action
+            temp=np.zeros((1,state_controlled))
+            temp[0][0]=swmm_model.getNodeResult(node[0],5)
+            temp[0][1]=swmm_model.getNodeResult(node[1],5)
+            for j in range(2,8):
+                temp[0][j]=rain[step+j-2]
+            agents_dqn[i].state_vector = temp
+                                          
         for i in node_controlled:
-            action_step = agents_dqn[i].actions_q(epsilon_value[step],action_space)
+            action_step = agents_dqn[i].actions_q(epsilon_value[step],action_space[i])
             agents_dqn[i].action_vector = action_step
-            if action_step==0:
-                swmm_model.setLinkSetting(pump[3],0)
-                swmm_model.setLinkSetting(pump[4],0)
-                swmm_model.setLinkSetting(pump[5],0)
-                swmm_model.setLinkSetting(pump[6],0)
-            if action_step==1:
-                swmm_model.setLinkSetting(pump[3],1)
-                swmm_model.setLinkSetting(pump[4],0)
-                swmm_model.setLinkSetting(pump[5],0)
-                swmm_model.setLinkSetting(pump[6],0)                   
-            if action_step==2:
-                swmm_model.setLinkSetting(pump[3],1)
-                swmm_model.setLinkSetting(pump[4],0)
-                swmm_model.setLinkSetting(pump[5],0)
-                swmm_model.setLinkSetting(pump[6],0) 
-            if action_step==3:
-                swmm_model.setLinkSetting(pump[3],1)
-                swmm_model.setLinkSetting(pump[4],1)
-                swmm_model.setLinkSetting(pump[5],1)
-                swmm_model.setLinkSetting(pump[6],0) 
-            if action_step==4:
-                swmm_model.setLinkSetting(pump[3],1)
-                swmm_model.setLinkSetting(pump[4],1)
-                swmm_model.setLinkSetting(pump[5],1)
-                swmm_model.setLinkSetting(pump[6],1) 
-                
-            current_gate = agents_dqn[i].action_vector
+
+        for i in node_controlled:
+            for j in range(len(action_list[i])-1):
+                swmm_model.setLinkSetting(i+str(j+1),action_list[i][agents_dqn[i].action_vector][j])
+
             
         flooding_before_step = swmm_model.flow_routing_stats()['flooding'] 
 #        print(swmm_model.getCurrentSimulationTime())
         
         #run swmm step
         time = swmm_model.swmm_stride(300)
-    
+        step +=1
     
         # reward function
         flooding_after_step = swmm_model.flow_routing_stats()['flooding'] 
@@ -170,8 +191,12 @@ while episode_timer<episode_count:
     
         # Observe the new states
         for i in node_controlled:
-            agents_dqn[i].state_new_vector = [swmm_model.getNodeResult(node[1],5)]
-            
+            temp=np.zeros((1,state_controlled))
+            temp[0][0]=swmm_model.getNodeResult(node[0],5)
+            temp[0][1]=swmm_model.getNodeResult(node[1],5)
+            for j in range(2,8):
+                temp[0][j]=rain[step+j-2]
+            agents_dqn[i].state_new_vector = temp
     
         # Update Replay Memory
         for i in node_controlled:

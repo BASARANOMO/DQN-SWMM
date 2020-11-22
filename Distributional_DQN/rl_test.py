@@ -18,9 +18,9 @@ import matplotlib.pyplot as plt
 
 #import from previous work
 from pond_net import pond_tracker
-from dqn_agent import deep_q_agent
+from C51Agent import C51Agent
 from ger_fun import reward_function, epsi_greedy
-from ger_fun import build_network
+from ger_fun import build_network_C51
 from core_network import stacker, replay_stacker
 
 data = xlrd.open_workbook("rain_case_2018.xlsx")
@@ -201,8 +201,7 @@ for i in node_controlled:
 #build neural model
 models_ac = {}
 for i in node_controlled:
-    model = target = build_network(state_controlled,20,3, 10, 'relu', 0.0)
-    #model = target = build_network(state_controlled,20,3, 100, 'relu', 0.0)
+    model = target = build_network_C51(state_controlled, 20, 51, 3, 10, 'relu', 0.0)
     #def build_network(input_states,output_states,hidden_layers,nuron_count,activation_function,dropout):
 #        if load_model != 'initial_run':
 #            model.load_weights(i + load_model)
@@ -214,7 +213,7 @@ for i in node_controlled:
 # Initialize Deep Q agents
 agents_dqn = {}
 for i in node_controlled:
-    temp = deep_q_agent(models_ac[i][0],
+    temp = C51Agent(models_ac[i][0],
                     models_ac[i][1],
                     state_controlled,
                     controlled_ponds[i].replay_memory,
