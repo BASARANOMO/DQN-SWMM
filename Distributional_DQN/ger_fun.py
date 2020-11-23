@@ -60,10 +60,9 @@ def build_network_C51(input_states,
     for _ in range(0, hidden_layers-1):
         layer = Dense(nuron_count, activation=activation_function)(layer)
         layer = Dropout(dropout)(layer)
-    
+
     outputs = []
     for _ in range(output_states):
         outputs.append(Dense(num_atoms, activation='relu')(layer))
-    
-    sgd = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
-    return Model(input_state, outputs, loss='mean_squared_error', optimizer=sgd)
+
+    return Model(input_state, outputs, loss='categorical_crossentropy')

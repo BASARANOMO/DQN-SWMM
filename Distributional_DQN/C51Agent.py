@@ -38,9 +38,6 @@ class C51Agent:
         self.num_atoms = num_atoms
         self.delta_z = (self.v_max - self.v_min) / float(self.num_atoms - 1)
         self.z = [self.v_min + i * self.delta_z for i in range(self.num_atoms)]
-        
-        # TO DO
-        self.prob = [np.zeros(())]
 
         self.state_vector = np.zeros((1, self.states))
         self.state_new_vector = np.zeros((1, self.states))
@@ -71,19 +68,33 @@ class C51Agent:
         temp_rewards = self.training_batch['rewards']
         temp_terminal = self.training_batch['terminal']
         temp_actions = self.training_batch['actions']
-        q_values_train_next = self.target_model.predict_on_batch(
-            temp_states_new)
-        target = self.ac_model.predict_on_batch(temp_states)
+
+        z = self.ac_model.predict_on_batch(temp_states_new)
+        z_ = self.target_model.predict_on_batch(temp_states_new)
+        z_concat = np.vstack()
+        q = np.sum(np.multiply(z_concat, np.array(self.z)), axis=1)
+        q = q.reshape((self.batch_size, 20), order='F')
+        next_actions = np.argmax(q, axis=1)
+
+        m_prob = [np.zeros((self.batch_size, self.num_atoms)) for _ in range(20)]
         for i in range(self.batch_size):
             action_idx = int(temp_actions[i])
             if temp_terminal[i]:
-                target[i][action_idx] = temp_rewards[i]
+                Tz = min(self.v_max, max(self.v_min, temp_reward[i]))
+                bj = (Tz - self.v_min) / self.delta_z
+                l, u = math.floor(bj), math.ceil(bj)
+                m_prob[action_idx][i][int(l)] += (u - bj)
+                m_prob[action_idx][i][int(u)] += (bj - l)
             else:
-                target[i][action_idx] = temp_rewards[i] + 0.95 * np.max(
-                    q_values_train_next[i])
+                for j in range(self.num_atoms):
+                    Tz = min(self.v_max, max(self.v_min, temp_reward[i] + 0.95 * self.z[j]))
+                    bj = (Tz - self.v_min) / self.delta_z
+                    l, u = math.floor(bj), math.ceil(bj)
+                    m_prob[action_idx][i][int(l)] += z_[next_actions[i]][i][j] * (u - bj)
+                    m_prob[action_idx][i][int(u)] += z_[next_actions[i]][i][j] * (bj - l)
 
         self.ac_model.fit(temp_states,
-                          target,
+                          m_prob,
                           batch_size=128,
                           epochs=1, # change epoch for tests
                           verbose=0)
@@ -95,7 +106,16 @@ class C51Agent:
             self._update_target_model()
         self._train()
 
+    def actions_q(self, action_space):
+        z = self.ac_model.predict(self.state_vector)
+        z_concat = np.vstack(z)
+        q_values = np.sum(np.multiply(z_concat, np.array(self.z)), axis=1)
+        action = self.policy(action_space, q_values, epsilon)
+        return action
+
+"""
     def actions_q(self, epsilon, action_space):
         q_values = self.ac_model.predict(self.state_vector)
         action = self.policy(action_space, q_values, epsilon)
         return action
+"""
